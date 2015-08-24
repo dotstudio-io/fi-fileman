@@ -1,0 +1,50 @@
+{
+  "name": "fi-seed-component-fileman",
+  "title": "Fi Seed Fileman Component",
+  "description": "Fi Seed's Fileman Component",
+  "version": "1.0.0",
+  "private": false,
+  "license": "MIT",
+  "author": "Final Development Studio <sorcery@finaldevstudio.com> (http://finaldevstudio.com)",
+  "contributors": [
+    "Santiago G. Marín <santiago@finaldevstudio.com>"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/finaldevstudio/fi-seed-component-fileman.git"
+  },
+  "scripts": {
+    "test": "./node_modules/mocha/bin/mocha test/*.js"
+  },
+  "dependencies": {
+    "busboy": "^0.2.9",
+    "crypto": "0.0.3",
+    "mkdirp": "^0.5.1",
+    "node-uuid": "^1.4.3",
+    "type-of-is": "^3.4.0"
+  },
+  "devDependencies": {
+    "body-parser": "^1.13.3",
+    "chai": "^3.2.0",
+    "express": "^4.13.3",
+    "mocha": "^2.2.5",
+    "mongoose": "^4.1.3",
+    "request": "^2.61.0"
+  },
+  "bugs": {
+    "url": "https://github.com/finaldevstudio/fi-seed-component-fileman/issues"
+  },
+  "homepage": "https://github.com/finaldevstudio/fi-seed-component-fileman",
+  "main": "lib/index.js",
+  "keywords": [
+    "multipart/form-data",
+    "multipart",
+    "form-data",
+    "component",
+    "fi-seed",
+    "manager",
+    "fileman",
+    "upload",
+    "file"
+  ]
+}
