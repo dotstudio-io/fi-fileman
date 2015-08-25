@@ -1,6 +1,10 @@
 'use strict';
 
 var path = require('path');
+var util = require('util');
+var fs = require('fs');
+
+var logfile = path.join(__dirname, 'fileman.log');
 
 module.exports = {
 
@@ -9,8 +13,21 @@ module.exports = {
   tempdir: path.normalize(path.join(__dirname, 'uploads')),
 
   debug: function () {
-    console.log('\n');
-    console.log.apply(console, arguments);
+    var content = '';
+
+    for (var arg in arguments) {
+      content += new Date().toISOString() + ':\n' + util.inspect(arguments[arg], {
+        showHidden: true,
+        colors: false,
+        depth: null
+      }).toString() + '\n\n';
+    }
+
+    fs.appendFile(logfile, content, function (err, data) {
+      if (err) {
+        throw err;
+      }
+    });
   }
 
 };

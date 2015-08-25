@@ -50,9 +50,9 @@ var os = require('os');
 
 module.exports = {
 
-  tempdir: path.normalize(path.join(os.tmpDir(), 'savina', 'uploads')),
+  tempdir: path.join(os.tmpDir(), 'my-app', 'uploads'),
 
-  stordir: path.normalize(path.join(__appdir, '..', 'savina-storage')),
+  stordir: path.join(process.env.HOME || process.env.USERPROFILE, 'my-app', 'storage'),
 
   debug: require('debug')('app:fileman')
 

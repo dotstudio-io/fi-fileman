@@ -1,3 +1,12 @@
+# Test uploaded
+test/uploads
+
+# Test stored
+test/storage
+
+# Test downloaded
+test/downloads
+
 # Logs
 logs
 *.log
