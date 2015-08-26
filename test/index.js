@@ -2,25 +2,26 @@
 
 var bodyParser = require('body-parser');
 var expect = require('chai').expect;
-var mongoose = require('mongoose');
+var mmmagic = require('mmmagic');
 var request = require('request');
 var express = require('express');
+var crypto = require('crypto');
 var fs = require('fs-extra');
 var path = require('path');
+var walk = require('walk');
 
 var config = require('./config');
 var fileman = require('..');
 
+var storedlist = path.normalize(path.join(__dirname, 'storedlist.log'));
 var downloads = path.normalize(path.join(__dirname, 'downloads'));
+var fixtures = [];
 var stored = [];
 
 var host;
 
 function getfile() {
-  return [
-    'image.png',
-    'text.txt'
-  ].sort(function () {
+  return fixtures.sort(function () {
     return 0.5 - Math.random();
   })[0];
 }
@@ -30,51 +31,144 @@ function getdata() {
     url: host,
 
     formData: {
-      file: fs.createReadStream(path.join(__dirname, 'fixtures', getfile()))
+      upload: fs.createReadStream(getfile())
     }
   };
 }
 
 describe('Fi Seed Fileman', function () {
+
   before(function (done) {
-    var app = express();
+    fs.removeSync(path.join(__dirname, 'fileman.log'));
+    fs.removeSync(path.join(__dirname, 'storedlist.log'));
 
-    fileman.configure(config);
+    var walker = walk.walk(path.join(__dirname, 'fixtures'));
 
-    app.use(bodyParser.json());
-    app.use(bodyParser.urlencoded({
-      extended: false
-    }));
-
-    app.use(fileman.multiparser);
-    app.use(fileman.cleaner);
-
-    app.get('/', function (req, res, next) {
-      res.end();
-    });
-
-    app.post('/', fileman.uploader('/with-post'));
-    app.put('/', fileman.uploader('/with-put'));
-
-    app.get('/file', fileman.downloader);
-
-    app.use(function (req, res, next) {
-      res.status(404);
+    walker.on('file', function (root, stats, next) {
+      fixtures.push(path.join(root, stats.name));
       next();
     });
 
-    app.use(function (err, req, res, next) {
-      if (res.status === 404) {
-        return res.end();
-      }
-
+    walker.on('errors', function (err) {
       throw err;
     });
 
-    var server = app.listen(function () {
-      console.log('Server listening on port', server.address().port, '\n');
-      host = 'http://localhost:' + server.address().port;
-      done();
+    walker.on('end', function () {
+      var app = express();
+
+      fileman.configure(config);
+
+      app.use(bodyParser.json());
+      app.use(bodyParser.urlencoded({
+        extended: false
+      }));
+
+      app.use(fileman.multiparser);
+      app.use(fileman.cleaner);
+
+      app.get('/', function (req, res, next) {
+        res.end();
+      });
+
+      function upload(req, res, next) {
+        var saved = [];
+
+        req.files.forEach(function (file) {
+          fileman.save(file, 'with-post', function (err, filedata) {
+            if (err) {
+              return next(err);
+            }
+
+            saved.push(filedata);
+
+            fs.appendFile(storedlist, '\n' + JSON.stringify(filedata, null, 2) + '\n', function (err, data) {
+              if (err) {
+                throw err;
+              }
+            });
+
+            if (saved.length === req.files.length) {
+              res.send(saved);
+            }
+          });
+        });
+      }
+
+      app.post('/', upload);
+      app.put('/', upload);
+
+      app.get('/file', function (req, res, next) {
+        if (!req.query.path && !req.params.path) {
+          return res.status(400).end();
+        }
+
+        var querypath = req.query.path || req.params.path;
+        var resolved = fileman.resolve(querypath);
+
+        fs.exists(resolved, function (exists) {
+          if (!exists) {
+            return res.status(404).end();
+          }
+
+          fs.stat(resolved, function (err, stats) {
+            if (err) {
+              return next(err);
+            }
+
+            var magic = new mmmagic.Magic(mmmagic.MAGIC_MIME_TYPE);
+
+            magic.detectFile(resolved, function (err, mimetype) {
+              if (err) {
+                return next(err);
+              }
+
+              var hash = crypto.createHash('md5');
+              var rs = fileman.read(querypath);
+
+              rs.on('data', function (data) {
+                hash.update(data, 'utf8');
+              });
+
+              rs.on('error', function (err) {
+                next(err);
+              });
+
+              rs.on('end', function () {
+                res.set({
+                  'Content-Type': mimetype,
+                  'Content-Length': stats.size,
+                  'Cache-Control': 'max-age=31536000',
+                  'Last-Modified': stats.mtime,
+                  'ETag': hash.digest('hex')
+                });
+
+                fileman.read(querypath).pipe(res);
+              });
+
+            });
+          });
+        });
+      });
+
+      app.use(function (req, res, next) {
+        res.status(404);
+        next();
+      });
+
+      app.use(function (err, req, res, next) {
+        if (res.status === 404) {
+          return res.end();
+        }
+
+        throw err;
+      });
+
+      var server = app.listen(function () {
+        console.log('Server listening on port', server.address().port, '\n');
+        host = 'http://localhost:' + server.address().port;
+        done();
+      });
+
     });
   });
 
@@ -173,10 +267,10 @@ describe('Fi Seed Fileman', function () {
 
         formData: {
           uploads: [
-            fs.createReadStream(path.join(__dirname, 'fixtures', getfile())),
-            fs.createReadStream(path.join(__dirname, 'fixtures', getfile())),
-            fs.createReadStream(path.join(__dirname, 'fixtures', getfile())),
-            fs.createReadStream(path.join(__dirname, 'fixtures', getfile()))
+            fs.createReadStream(getfile()),
+            fs.createReadStream(getfile()),
+            fs.createReadStream(getfile()),
+            fs.createReadStream(getfile())
           ]
         }
       }, function (err, res, body) {
