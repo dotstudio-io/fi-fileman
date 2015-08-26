@@ -47,6 +47,7 @@ describe('Fi Seed Fileman', function () {
     }));
 
     app.use(fileman.multiparser);
+    app.use(fileman.cleaner);
 
     app.get('/', function (req, res, next) {
       res.end();
@@ -69,8 +70,6 @@ describe('Fi Seed Fileman', function () {
 
       throw err;
     });
-
-    app.use(fileman.cleaner);
 
     var server = app.listen(function () {
       console.log('Server listening on port', server.address().port, '\n');
@@ -244,9 +243,9 @@ describe('Fi Seed Fileman', function () {
     });
 
     after(function () {
-      // fs.removeSync(config.stordir);
-      // fs.removeSync(config.tempdir);
-      // fs.removeSync(downloads);
+      fs.removeSync(config.stordir);
+      fs.removeSync(config.tempdir);
+      fs.removeSync(downloads);
     });
   });
 

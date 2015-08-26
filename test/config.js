@@ -13,7 +13,7 @@ module.exports = {
   tempdir: path.normalize(path.join(__dirname, 'uploads')),
 
   debug: function () {
-    var content = '';
+    var content = '\n';
 
     for (var arg in arguments) {
       content += new Date().toISOString() + ':\n' + util.inspect(arguments[arg], {
