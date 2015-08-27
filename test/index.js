@@ -111,18 +111,12 @@ describe('Fi Seed Fileman HTTP', function () {
         var saved = [];
 
         req.files.forEach(function (file) {
-          fileman.save(file, 'with-post', function (err, filedata) {
+          fileman.save(file, 'with-post', function (err, fileinfo) {
             if (err) {
               return next(err);
             }
 
-            saved.push(filedata);
-
-            fs.appendFile(storedlist, '\n' + JSON.stringify(filedata, null, 2) + '\n', function (err, data) {
-              if (err) {
-                throw err;
-              }
-            });
+            saved.push(fileinfo);
 
             if (saved.length === req.files.length) {
               res.send(saved);
@@ -139,40 +133,39 @@ describe('Fi Seed Fileman HTTP', function () {
           return res.status(400).end();
         }
 
-        var querypath = req.query.path;
-        var resolved = fileman.resolve(querypath);
+        var resolved = fileman.resolve(req.query.path);
 
         fs.exists(resolved, function (exists) {
           if (!exists) {
             return res.status(404).end();
           }
 
-          var magic = new mmmagic.Magic(mmmagic.MAGIC_MIME_TYPE);
-
-          magic.detectFile(resolved, function (err, mimetype) {
+          fs.stat(resolved, function (err, stats) {
             if (err) {
-              return next(err);
+              throw err;
             }
 
-            var hash = crypto.createHash('md5');
-            var rs = fileman.read(querypath);
+            var magic = new mmmagic.Magic(mmmagic.MAGIC_MIME_TYPE);
 
-            rs.on('data', function (data) {
-              hash.update(data, 'utf8');
-            });
+            magic.detectFile(resolved, function (err, mimetype) {
+              if (err) {
+                return next(err);
+              }
 
-            rs.on('error', function (err) {
-              next(err);
-            });
+              var hash = crypto.createHash('md5');
+              var rs = fileman.read(req.query.path);
 
-            rs.on('end', function () {
-              fileman.read(function (err, stats, reader) {
-                if (err) {
-                  return next(err);
-                }
+              rs.on('data', function (data) {
+                hash.update(data, 'utf8');
+              });
 
+              rs.on('error', function (err) {
+                next(err);
+              });
+
+              rs.on('end', function () {
                 res.set({
-                  'Content-Disposition': 'inline; filename="' + path.basename(querypath) + '"',
+                  'Content-Disposition': 'inline; filename="' + path.basename(req.query.path) + '"',
                   'Cache-Control': 'max-age=31536000',
                   'Content-Length': stats.size,
                   'Last-Modified': stats.mtime,
@@ -180,10 +173,9 @@ describe('Fi Seed Fileman HTTP', function () {
                   'ETag': hash.digest('hex')
                 });
 
-                reader.pipe(res);
+                fileman.read(req.query.path).pipe(res);
               });
             });
-
           });
         });
       });
@@ -237,7 +229,7 @@ describe('Fi Seed Fileman HTTP', function () {
 
         expect(files[0].name).to.be.a('string');
         expect(files[0].type).to.be.a('string');
-        expect(files[0].size).to.be.a('number');
+        expect(files[0].stats.size).to.be.a('number');
         expect(files[0].path).to.be.a('string');
         expect(files[0].md5).to.be.a('string');
 
@@ -258,7 +250,7 @@ describe('Fi Seed Fileman HTTP', function () {
 
         expect(files[0].name).to.be.a('string');
         expect(files[0].type).to.be.a('string');
-        expect(files[0].size).to.be.a('number');
+        expect(files[0].stats.size).to.be.a('number');
         expect(files[0].path).to.be.a('string');
         expect(files[0].md5).to.be.a('string');
 
@@ -282,7 +274,7 @@ describe('Fi Seed Fileman HTTP', function () {
 
         expect(files[0].name).to.be.a('string');
         expect(files[0].type).to.be.a('string');
-        expect(files[0].size).to.be.a('number');
+        expect(files[0].stats.size).to.be.a('number');
         expect(files[0].path).to.be.a('string');
         expect(files[0].md5).to.be.a('string');
 
@@ -321,7 +313,7 @@ describe('Fi Seed Fileman HTTP', function () {
         files.forEach(function (file) {
           expect(file.name).to.be.a('string');
           expect(file.type).to.be.a('string');
-          expect(file.size).to.be.a('number');
+          expect(file.stats.size).to.be.a('number');
           expect(file.path).to.be.a('string');
           expect(file.md5).to.be.a('string');
         });
@@ -347,7 +339,7 @@ describe('Fi Seed Fileman HTTP', function () {
         files.forEach(function (file) {
           expect(file.name).to.be.a('string');
           expect(file.type).to.be.a('string');
-          expect(file.size).to.be.a('number');
+          expect(file.stats.size).to.be.a('number');
           expect(file.path).to.be.a('string');
           expect(file.md5).to.be.a('string');
         });
@@ -394,7 +386,7 @@ describe('Fi Seed Fileman HTTP', function () {
               throw err;
             }
 
-            expect(stats.size).to.equal(file.size);
+            expect(stats.size).to.equal(file.stats.size);
 
             done();
           });
@@ -405,7 +397,7 @@ describe('Fi Seed Fileman HTTP', function () {
 
       on('response', function (res) {
         expect(res.statusCode).to.equal(200);
-        expect(Number(res.headers['content-length'])).to.equal(file.size);
+        expect(Number(res.headers['content-length'])).to.equal(file.stats.size);
         expect(res.headers.etag).to.equal(file.md5);
 
         console.log("\n\n");
