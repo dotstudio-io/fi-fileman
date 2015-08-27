@@ -42,13 +42,33 @@ describe('Fi Seed Fileman', function () {
     var error = null;
 
     try {
-      fileman.save();
+      fileman.resolve();
     } catch (ex) {
       console.log(ex);
       error = ex;
     }
 
     expect(error).to.not.be.null;
+  });
+
+  it('should initialize successfully', function () {
+    var error = null;
+
+    fileman.init(config);
+
+    try {
+      fileman.resolve('werwer');
+    } catch (ex) {
+      console.log(ex);
+      error = ex;
+    }
+
+    expect(fileman.resolve('/')).to.equal(config.stordir);
+    expect(error).to.be.null;
+  });
+
+  it('should be kept initialized', function () {
+    expect(require('..').resolve('/')).to.equal(config.stordir);
   });
 
 });

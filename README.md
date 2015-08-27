@@ -21,21 +21,17 @@ var fileman = require('fi-seed-component-fileman');
 ```
 
 ### Initialization
-This component can be configured before using it:
+This component musit be initialized before using it:
 
 ```js
 var fileman = require('fi-seed-component-fileman');
 var app = require('express')();
 var path = require('path');
 
-fileman.configure({
-
+fileman.init({
   tempdir: path.join(os.tmpDir(), 'my-app', 'uploads'),
-
   stordir: path.join(process.env.HOME || process.env.USERPROFILE, 'my-app', 'storage'),
-
   debug: true
-
 });
 
 //...
