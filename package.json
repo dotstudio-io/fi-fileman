@@ -44,6 +44,7 @@
     "fi-seed",
     "manager",
     "fileman",
+    "busboy",
     "upload",
     "file"
   ]
