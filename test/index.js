@@ -63,12 +63,12 @@ describe('Fi Seed Fileman', function () {
       error = ex;
     }
 
-    expect(fileman.resolve('/')).to.equal(config.stordir);
+    expect(fileman.resolve()).to.equal(config.stordir);
     expect(error).to.be.null;
   });
 
   it('should be kept initialized', function () {
-    expect(require('..').resolve('/')).to.equal(config.stordir);
+    expect(require('..').resolve()).to.equal(config.stordir);
   });
 
 });
@@ -269,6 +269,7 @@ describe('Fi Seed Fileman HTTP', function () {
 
     it('should be able to process parallel requests', function (done) {
       var completed = 0;
+      var total = 20;
 
       function onresponse(err, res, body) {
         var files = JSON.parse(body);
@@ -286,23 +287,14 @@ describe('Fi Seed Fileman HTTP', function () {
 
         stored = stored.concat(files);
 
-        if (++completed === 5) {
+        if (++completed === total) {
           done();
         }
       }
 
-      request.post(getdata(), onresponse);
-      request.post(getdata(), onresponse);
-      request.post(getdata(), onresponse);
-      request.post(getdata(), onresponse);
-      request.post(getdata(), onresponse);
-      request.post(getdata(), onresponse);
-      request.post(getdata(), onresponse);
-      request.post(getdata(), onresponse);
-      request.post(getdata(), onresponse);
-      request.post(getdata(), onresponse);
-      request.post(getdata(), onresponse);
-      request.post(getdata(), onresponse);
+      for (var i = 0; i < total; i++) {
+        request.post(getdata(), onresponse);
+      }
     });
 
     it('should be able to save multiple uploaded files', function (done) {
@@ -337,6 +329,49 @@ describe('Fi Seed Fileman HTTP', function () {
 
         done();
       });
+    });
+
+    it('should be able to save multiple uploaded files on parallel requests', function (done) {
+      var completed = 0;
+      var total = 20;
+
+      function onresponse(err, res, body) {
+        var files = JSON.parse(body);
+
+        expect(err).to.be.null;
+        expect(res.statusCode).to.equal(200);
+        expect(files).to.be.an('array');
+        expect(files.length).to.equal(4);
+
+        files.forEach(function (file) {
+          expect(file.name).to.be.a('string');
+          expect(file.type).to.be.a('string');
+          expect(file.size).to.be.a('number');
+          expect(file.path).to.be.a('string');
+          expect(file.md5).to.be.a('string');
+        });
+
+        stored = stored.concat(files);
+
+        if (++completed === total) {
+          done();
+        }
+      }
+
+      for (var i = 0; i < total; i++) {
+        request.post({
+          url: host,
+
+          formData: {
+            uploads: [
+              fs.createReadStream(getfile()),
+              fs.createReadStream(getfile()),
+              fs.createReadStream(getfile()),
+              fs.createReadStream(getfile())
+            ]
+          }
+        }, onresponse);
+      }
     });
 
     it('should download a file from it\'s path', function (done) {
