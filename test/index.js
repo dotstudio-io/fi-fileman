@@ -38,6 +38,23 @@ function getdata() {
 
 describe('Fi Seed Fileman', function () {
 
+  it('should throw an error if not initialized', function () {
+    var error = null;
+
+    try {
+      fileman.save();
+    } catch (ex) {
+      console.log(ex);
+      error = ex;
+    }
+
+    expect(error).to.not.be.null;
+  });
+
+});
+
+describe('Fi Seed Fileman HTTP', function () {
+
   before(function (done) {
     fs.removeSync(path.join(__dirname, 'fileman.log'));
     fs.removeSync(path.join(__dirname, 'storedlist.log'));
@@ -56,7 +73,7 @@ describe('Fi Seed Fileman', function () {
     walker.on('end', function () {
       var app = express();
 
-      fileman.configure(config);
+      fileman.init(config);
 
       app.use(bodyParser.json());
       app.use(bodyParser.urlencoded({
@@ -164,7 +181,7 @@ describe('Fi Seed Fileman', function () {
       });
 
       var server = app.listen(function () {
-        console.log('Server listening on port', server.address().port, '\n');
+        console.log('\nServer listening on port', server.address().port, '\n');
         host = 'http://localhost:' + server.address().port;
         done();
       });
@@ -254,6 +271,13 @@ describe('Fi Seed Fileman', function () {
         }
       }
 
+      request.post(getdata(), onresponse);
+      request.post(getdata(), onresponse);
+      request.post(getdata(), onresponse);
+      request.post(getdata(), onresponse);
+      request.post(getdata(), onresponse);
+      request.post(getdata(), onresponse);
+      request.post(getdata(), onresponse);
       request.post(getdata(), onresponse);
       request.post(getdata(), onresponse);
       request.post(getdata(), onresponse);
