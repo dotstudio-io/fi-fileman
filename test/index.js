@@ -135,11 +135,11 @@ describe('Fi Seed Fileman HTTP', function () {
       app.put('/', upload);
 
       app.get('/file', function (req, res, next) {
-        if (!req.query.path && !req.params.path) {
+        if (!req.query.path) {
           return res.status(400).end();
         }
 
-        var querypath = req.query.path || req.params.path;
+        var querypath = req.query.path;
         var resolved = fileman.resolve(querypath);
 
         fs.exists(resolved, function (exists) {
@@ -147,42 +147,43 @@ describe('Fi Seed Fileman HTTP', function () {
             return res.status(404).end();
           }
 
-          fs.stat(resolved, function (err, stats) {
+          var magic = new mmmagic.Magic(mmmagic.MAGIC_MIME_TYPE);
+
+          magic.detectFile(resolved, function (err, mimetype) {
             if (err) {
               return next(err);
             }
 
-            var magic = new mmmagic.Magic(mmmagic.MAGIC_MIME_TYPE);
+            var hash = crypto.createHash('md5');
+            var rs = fileman.read(querypath);
 
-            magic.detectFile(resolved, function (err, mimetype) {
-              if (err) {
-                return next(err);
-              }
+            rs.on('data', function (data) {
+              hash.update(data, 'utf8');
+            });
 
-              var hash = crypto.createHash('md5');
-              var rs = fileman.read(querypath);
+            rs.on('error', function (err) {
+              next(err);
+            });
 
-              rs.on('data', function (data) {
-                hash.update(data, 'utf8');
-              });
+            rs.on('end', function () {
+              fileman.read(function (err, stats, reader) {
+                if (err) {
+                  return next(err);
+                }
 
-              rs.on('error', function (err) {
-                next(err);
-              });
-
-              rs.on('end', function () {
                 res.set({
-                  'Content-Type': mimetype,
-                  'Content-Length': stats.size,
+                  'Content-Disposition': 'inline; filename="' + path.basename(querypath) + '"',
                   'Cache-Control': 'max-age=31536000',
+                  'Content-Length': stats.size,
                   'Last-Modified': stats.mtime,
+                  'Content-Type': mimetype,
                   'ETag': hash.digest('hex')
                 });
 
-                fileman.read(querypath).pipe(res);
+                reader.pipe(res);
               });
-
             });
+
           });
         });
       });
@@ -406,6 +407,12 @@ describe('Fi Seed Fileman HTTP', function () {
         expect(res.statusCode).to.equal(200);
         expect(Number(res.headers['content-length'])).to.equal(file.size);
         expect(res.headers.etag).to.equal(file.md5);
+
+        console.log("\n\n");
+        console.dir(res.headers, {
+          colors: true
+        });
+        console.log("\n\n");
       }).
 
       on('error', function (err) {
