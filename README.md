@@ -25,6 +25,7 @@ This component musit be initialized before using it:
 
 ```js
 var fileman = require('fi-seed-component-fileman');
+var db = require('your-database-manager');
 var app = require('express')();
 var path = require('path');
 
@@ -52,7 +53,8 @@ app.post('/api/files/', function (req, res, next) {
       }
 
       // Save the file information (fileinfo) to a database entry or something alike...
-      db.create(fileinfo, function (err, data) {
+
+      db.files.create(fileinfo, function (err, data) {
         if (err) {
           return next(err);
         }
@@ -68,10 +70,17 @@ app.post('/api/files/', function (req, res, next) {
 
 });
 
-app.get('/api/files/', function (req, res, next) {
+app.get('/api/files/:id', function (req, res, next) {
 
   // Obtain the file information somehow...
-  res.download(fileman.resolve(fileinfo.path), fileinfo.name);
+
+  db.files.findById(req.params.id, function (err, data) {
+    if (err) {
+      return next(err);
+    }
+
+    res.download(fileman.resolve(data.path), data.name);
+  });
 
 });
 
@@ -156,7 +165,8 @@ app.post('/api/files', function (req, res, next) {
       }
 
       // Save the file information (fileinfo) to a database entry or something alike...
-      db.create(fileinfo, function (err, data) {
+
+      db.files.create(fileinfo, function (err, data) {
         if (err) {
           return next(err);
         }
@@ -217,13 +227,7 @@ fileman.save(file, folder, function (err, fileinfo) {
     return next(err);
   }
 
-  // Save the file information to a database entry or something alike
-
-  saved.push(fileinfo);
-
-  if (saved.length === req.files.length) {
-    res.send(saved);
-  }
+  // File has been saved successfully
 });
 ```
 
@@ -270,11 +274,17 @@ All paths are normalized, meaning that if you pass `'..'` as the folder it will 
 Reads a file from it's path relative to the `stordir` folder and returns it's read `Stream`:
 
 ```js
-app.get('/api/files', function (req, res, end) {
+app.get('/api/files/:id', function (req, res, end) {
 
   // Obtain the file information somehow...
 
-  fileman.read('/path/to/file.txt').pipe(res);
+  db.files.findById(req.params.id, function (err, data) {
+    if (err) {
+      return next(err);
+    }
+
+    fileman.read('/path/to/file.txt').pipe(res);
+  });
 
 });
 ```
@@ -286,16 +296,22 @@ app.get('/api/files/:id', function (req, res, end) {
 
   // Obtain the file information somehow...
 
-  res.set({
-    'Content-Disposition': 'inline; filename="' + fileinfo.name + '"',
-    'Cache-Control': 'max-age=31536000',
-    'Content-Type': fileinfo.mimetype,
-    'Content-Length': fileinfo.stats.size,
-    'Last-Modified': fileinfo.stats.mtime,
-    'ETag': fileinfo.md5
-  });
+  db.files.findById(req.params.id, function (err, data) {
+    if (err) {
+      return next(err);
+    }
 
-  fileman.read('/path/to/the/file.txt').pipe(res);
+    res.set({
+      'Content-Disposition': 'inline; filename="' + data.name + '"',
+      'Cache-Control': 'max-age=31536000',
+      'Content-Length': data.stats.size,
+      'Last-Modified': data.stats.mtime,
+      'Content-Type': data.mimetype,
+      'ETag': data.md5
+    });
+
+    fileman.read(data.path).pipe(res);
+  });
 
 });
 ```
@@ -311,7 +327,13 @@ app.get('/api/files/:id', function (req, res, end) {
 
   // Obtain the file information somehow...
 
-  res.download(fileman.resolve(fileinfo.path), fileinfo.name);
+  db.files.findById(req.params.id, function (err, data) {
+    if (err) {
+      return next(err);
+    }
+
+    res.download(fileman.resolve(data.path), data.name);
+  });
 
 });
 ```
