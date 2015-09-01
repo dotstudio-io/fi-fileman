@@ -8,13 +8,15 @@ var express = require('express');
 var crypto = require('crypto');
 var fs = require('fs-extra');
 var path = require('path');
+var util = require('util');
 var walk = require('walk');
+var os = require('os');
 
 var config = require('./config');
 var fileman = require('..');
 
-var storedlist = path.normalize(path.join(__dirname, 'storedlist.log'));
 var downloads = path.normalize(path.join(__dirname, 'downloads'));
+var logfile = path.join(__dirname, 'tests.log');
 var fixtures = [];
 var stored = [];
 
@@ -38,37 +40,24 @@ function getdata() {
 
 describe('Fi Seed Fileman', function () {
 
-  it('should throw an error if not initialized', function () {
-    var error = null;
+  it('should use default values if not configured', function () {
+    expect(fileman.defaults.stordir).to.be.a('string');
+    expect(fileman.defaults.tempdir).to.be.a('string');
 
-    try {
-      fileman.resolve();
-    } catch (ex) {
-      console.log(ex);
-      error = ex;
-    }
-
-    expect(error).to.not.be.null;
+    expect(fileman.config.stordir).to.be.empty;
+    expect(fileman.config.tempdir).to.be.empty;
   });
 
-  it('should initialize successfully', function () {
-    var error = null;
+  it('should configure successfully', function () {
+    fileman.configure(config);
 
-    fileman.init(config);
-
-    try {
-      fileman.resolve('werwer');
-    } catch (ex) {
-      console.log(ex);
-      error = ex;
-    }
-
-    expect(fileman.resolve()).to.equal(config.stordir);
-    expect(error).to.be.null;
+    expect(fileman.config.stordir).to.equal(config.stordir);
+    expect(fileman.config.tempdir).to.equal(config.tempdir);
   });
 
   it('should be kept initialized', function () {
-    expect(require('..').resolve()).to.equal(config.stordir);
+    expect(require('..').config.stordir).to.equal(config.stordir);
+    expect(require('..').config.tempdir).to.equal(config.tempdir);
   });
 
 });
@@ -76,8 +65,7 @@ describe('Fi Seed Fileman', function () {
 describe('Fi Seed Fileman HTTP', function () {
 
   before(function (done) {
-    fs.removeSync(path.join(__dirname, 'fileman.log'));
-    fs.removeSync(path.join(__dirname, 'storedlist.log'));
+    fs.removeSync(logfile);
 
     var walker = walk.walk(path.join(__dirname, 'fixtures'));
 
@@ -93,15 +81,14 @@ describe('Fi Seed Fileman HTTP', function () {
     walker.on('end', function () {
       var app = express();
 
-      fileman.init(config);
-
       app.use(bodyParser.json());
+
       app.use(bodyParser.urlencoded({
         extended: false
       }));
 
-      app.use(fileman.multiparser);
-      app.use(fileman.cleaner);
+      app.use(fileman.multiparser());
+      app.use(fileman.cleaner());
 
       app.get('/', function (req, res, next) {
         res.end();
@@ -109,6 +96,10 @@ describe('Fi Seed Fileman HTTP', function () {
 
       function upload(req, res, next) {
         var saved = [];
+
+        if (!req.files.length) {
+          return res.send(saved);
+        }
 
         req.files.forEach(function (file) {
           fileman.save(file, 'with-post', function (err, fileinfo) {
@@ -216,6 +207,25 @@ describe('Fi Seed Fileman HTTP', function () {
   describe('component', function () {
     it('should be a object', function () {
       expect(fileman).to.be.an('object');
+    });
+
+    it('should processes a multipart form data without files', function (done) {
+      request.post({
+        url: host,
+
+        formData: {
+          werwer: 'werwerwer'
+        }
+      }, function (err, res, body) {
+        var files = JSON.parse(body);
+
+        expect(err).to.be.null;
+        expect(res.statusCode).to.equal(200);
+        expect(files).to.be.an('array');
+        expect(files.length).to.equal(0);
+
+        done();
+      });
     });
 
     it('should parse and save multipart-form data via POST', function (done) {
@@ -399,12 +409,6 @@ describe('Fi Seed Fileman HTTP', function () {
         expect(res.statusCode).to.equal(200);
         expect(Number(res.headers['content-length'])).to.equal(file.stats.size);
         expect(res.headers.etag).to.equal(file.md5);
-
-        console.log("\n\n");
-        console.dir(res.headers, {
-          colors: true
-        });
-        console.log("\n\n");
       }).
 
       on('error', function (err) {
