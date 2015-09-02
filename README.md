@@ -21,7 +21,7 @@ var fileman = require('fi-seed-component-fileman');
 ```
 
 ### Initialization
-This component musit be initialized before using it:
+This component should be configured before using it:
 
 ```js
 var fileman = require('fi-seed-component-fileman');
@@ -29,10 +29,9 @@ var db = require('your-database-manager');
 var app = require('express')();
 var path = require('path');
 
-fileman.init({
+fileman.configure({
   tempdir: path.join(os.tmpDir(), 'my-app', 'uploads'),
-  stordir: path.join(process.env.HOME || process.env.USERPROFILE, 'my-app', 'storage'),
-  debug: true
+  stordir: path.join(process.env.HOME || process.env.USERPROFILE, 'my-app', 'storage')
 });
 
 //...
@@ -90,40 +89,38 @@ app.get('/api/files/:id', function (req, res, next) {
 ## Methods
 Fileman exposes multiple methods that might be used as functions or Express middleware.
 
-### Init
-This is the initialization method and must be called before using any of it's methods or it will throw an error:
+### Configure
+This is the initialization method and should be called before using any of it's methods:
 
 ```js
 fileman.init({
 
   tempdir: path.join(os.tmpDir(), 'my-app', 'uploads'),
 
-  stordir: path.join(process.env.HOME || process.env.USERPROFILE, 'my-app', 'storage'),
-
-  debug: true
+  stordir: path.join(process.env.HOME || process.env.USERPROFILE, 'my-app', 'storage')
 
 });
 ```
 
 It only receives a parameter that must be an `Object` with the following optional parameters:
 - **tempdir**: This can be a `String` to the absolute path where the temporal uploaded files are saved. It defaults to:
-- path.join(os.tmpDir(), 'fileman-uploads')
-- **stordir**: This can be a `String` to the absolute path where the files are finally stored. It defaults to:
+  ```js
+  path.join(os.tmpDir(), 'fileman-uploads')
+  ```
 
+- **stordir**: This can be a `String` to the absolute path where the files are finally stored. It defaults to:
   ```js
   path.join(process.env.HOME || process.env.USERPROFILE, 'fileman-storage')
   ```
 
   That path might resolve to `C:\Users\[your user]\fileman-storage` in Windows, to `/home/[your user]/fileman-storage` in Linux and to `/Users/[your user]/fileman-storage` in OSX.
 
-- **debug**: This can be a `Function` to log with or a `Boolean`. If `true` it will use `console.log`.
-
+#### Using a configuration module
 If you wish to configure it with a module then it should look like this:
 
 ```js
 'use strict';
 
-var debug = require('debug');
 var path = require('path');
 var os = require('os');
 
@@ -131,9 +128,7 @@ module.exports = {
 
   tempdir: path.join(os.tmpDir(), 'my-app', 'uploads'),
 
-  stordir: path.join(process.env.HOME || process.env.USERPROFILE, 'my-app', 'storage'),
-
-  debug: debug('app:fileman')
+  stordir: path.join(process.env.HOME || process.env.USERPROFILE, 'my-app', 'storage')
 
 };
 ```
@@ -145,10 +140,10 @@ fileman.init(require('./config/fileman'));
 ```
 
 ### Multiparser
-Use this method as an _Express middelware_ that intercepts POST or PUT `multipart/form-data` requests only. This will save the uploaded temporal files to the specified `tempdir`, add the uploaded files to `req.files` as an `Array` and attach the fields to `req.body` as an object with field names as properties. The fields are parsed as JSON whenever possible.
+This method returns an _Express middelware_ that intercepts POST or PUT `multipart/form-data` requests only. This will save the uploaded temporal files to the specified `tempdir`, add the uploaded files to `req.files` as an `Array` and attach the fields to `req.body` as an object with field names as properties. The fields are parsed as JSON whenever possible.
 
 ```js
-app.use(fileman.multiparser);
+app.use(fileman.multiparser());
 ```
 
 In the `next` callback you'll receive the parameters as usual but `req` will now have `body` and `files` properties as an `Object` and `Array` respectively:
@@ -186,11 +181,11 @@ app.post('/api/files', function (req, res, next) {
 So if the user makes a `POST` with `multipart/form-data` to `/api/files`, like the example above, then the `req` object will contain the corresponding files and fields.
 
 ### Cleaner
-This **Express middleware** will clean all the files inside the `req.files` `Array` once the `res` has finished so where you declare it is not really relevant.
+This method returns an _Express middleware_ that will clean all the files inside the `req.files` `Array` once the `res` has finished so where you declare it is not really relevant.
 
 ```js
 //...
-app.use(fileman.cleaner);
+app.use(fileman.cleaner());
 //...
 ```
 
@@ -278,39 +273,39 @@ app.get('/api/files/:id', function (req, res, end) {
 
   // Obtain the file information somehow...
 
-  db.files.findById(req.params.id, function (err, data) {
+  db.files.findById(req.params.id, function (err, fileinfo) {
     if (err) {
       return next(err);
     }
 
-    fileman.read('/path/to/file.txt').pipe(res);
+    fileman.read(fileinfo.path).pipe(res);
   });
 
 });
 ```
 
-If your previously saved the file information to some database or alike, then it's a good practice to set the response headers with the corresponding information before sending it:
+It's a good practice to set the correct and recommended response headers with the corresponding information before sending it:
 
 ```js
 app.get('/api/files/:id', function (req, res, end) {
 
   // Obtain the file information somehow...
 
-  db.files.findById(req.params.id, function (err, data) {
+  db.files.findById(req.params.id, function (err, fileinfo) {
     if (err) {
       return next(err);
     }
 
     res.set({
-      'Content-Disposition': 'inline; filename="' + data.name + '"',
+      'Content-Disposition': 'inline; filename="' + fileinfo.name + '"',
       'Cache-Control': 'max-age=31536000',
-      'Content-Length': data.stats.size,
-      'Last-Modified': data.stats.mtime,
-      'Content-Type': data.mimetype,
-      'ETag': data.md5
+      'Content-Length': fileinfo.stats.size,
+      'Last-Modified': fileinfo.stats.mtime,
+      'Content-Type': fileinfo.mimetype,
+      'ETag': fileinfo.md5
     });
 
-    fileman.read(data.path).pipe(res);
+    fileman.read(fileinfo.path).pipe(res);
   });
 
 });
@@ -320,20 +315,22 @@ app.get('/api/files/:id', function (req, res, end) {
 As you may have noticed, the `fileinfo` is retrieved from your database, meaning that if the files are modified, accessed or deleted outside the application then this information will be incorrect. Make sure you update your database entries accordingly.
 
 ### Resolve
-This method is to obtain the file's full path relative to the `stordir` folder. This can be particularly useful when using Express' `res.download` method:
+Use this method is to obtain the file's full path relative to the `stordir` folder. This can be particularly useful when using Express' `res.download` method:
 
 ```js
 app.get('/api/files/:id', function (req, res, end) {
 
   // Obtain the file information somehow...
 
-  db.files.findById(req.params.id, function (err, data) {
+  db.files.findById(req.params.id, function (err, fileinfo) {
     if (err) {
       return next(err);
     }
 
-    res.download(fileman.resolve(data.path), data.name);
+    res.download(fileman.resolve(fileinfo), fileinfo.name);
   });
 
 });
 ```
+
+It receives only one argument that can be a `String` with the relative path to the `stordir` or a `fileinfo` `Object` with a valid `path` value.
