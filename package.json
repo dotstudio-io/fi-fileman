@@ -1,7 +1,7 @@
 {
-  "name": "fi-seed-component-fileman",
-  "title": "Fi Seed Fileman Component",
-  "description": "Fi Seed's Fileman Component",
+  "name": "fi-fileman",
+  "title": "Fi Fileman",
+  "description": "File manager and `multipart/form-data` parser for Node.js Express apps",
   "version": "1.1.0",
   "private": false,
   "license": "MIT",
@@ -11,17 +11,17 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/finaldevstudio/fi-seed-component-fileman.git"
+    "url": "git+https://github.com/finaldevstudio/fi-fileman.git"
   },
   "scripts": {
     "test": "./node_modules/mocha/bin/mocha test"
   },
   "dependencies": {
     "busboy": "^0.2.9",
-    "fs-extra": "^0.23.1",
-    "mmmagic": "^0.3.15",
-    "node-uuid": "^1.4.3",
-    "type-of-is": "^3.4.0"
+    "fs-extra": "^0.26.2",
+    "is_js": "^0.7.4",
+    "mmmagic": "^0.4.1",
+    "node-uuid": "^1.4.3"
   },
   "devDependencies": {
     "body-parser": "^1.13.3",
@@ -32,9 +32,9 @@
     "walk": "^2.3.9"
   },
   "bugs": {
-    "url": "https://github.com/finaldevstudio/fi-seed-component-fileman/issues"
+    "url": "https://github.com/finaldevstudio/fi-fileman/issues"
   },
-  "homepage": "https://github.com/finaldevstudio/fi-seed-component-fileman",
+  "homepage": "https://github.com/finaldevstudio/fi-fileman",
   "main": "index.js",
   "keywords": [
     "multipart/form-data",
