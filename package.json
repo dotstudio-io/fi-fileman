@@ -2,7 +2,7 @@
   "name": "fi-fileman",
   "title": "Fi Fileman",
   "description": "File manager and `multipart/form-data` parser for Node.js Express apps",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": false,
   "license": "MIT",
   "author": "Final Development Studio <sorcery@finaldevstudio.com> (http://finaldevstudio.com)",
