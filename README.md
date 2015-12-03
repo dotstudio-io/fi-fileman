@@ -1,4 +1,4 @@
-# fi-fileman
+# Fi Fileman
 File manager and `multipart/form-data` parser for Node.js Express apps
 
 ## Installing
