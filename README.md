@@ -1,5 +1,5 @@
 # fi-fileman
-File manager and `multipart/form-data` parser for Node.js Express apps
+File manager and `multipart/form-data` parser for Node.js Express applications.
 
 ## Installing
 ```sh
