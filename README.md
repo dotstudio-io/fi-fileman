@@ -20,15 +20,12 @@ var fileman = require('fi-fileman');
 var app = require('express')();
 var path = require('path');
 
-fileman.configure({
-  tempdir: path.join(os.tmpDir(), 'my-app', 'uploads'),
-  stordir: path.join(process.env.HOME || process.env.USERPROFILE, 'my-app', 'storage')
-});
+fileman.configure(config);
 
 //...
 
-app.use(fileman.multiparser);
-app.use(fileman.cleaner);
+app.use(fileman.multiparser());
+app.use(fileman.cleaner());
 
 //...
 
