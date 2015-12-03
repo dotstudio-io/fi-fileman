@@ -38,7 +38,7 @@ function getdata() {
   };
 }
 
-describe('Fi Seed Fileman', function () {
+describe('Fi Fileman', function () {
 
   it('should use default values if not configured', function () {
     expect(fileman.defaults.stordir).to.be.a('string');
@@ -62,7 +62,7 @@ describe('Fi Seed Fileman', function () {
 
 });
 
-describe('Fi Seed Fileman HTTP', function () {
+describe('Fi Fileman HTTP', function () {
 
   before(function (done) {
     fs.removeSync(logfile);
