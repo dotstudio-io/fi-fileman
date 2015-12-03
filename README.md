@@ -15,8 +15,8 @@ var fileman = require('fi-fileman');
 This component should be configured before using it:
 
 ```js
-var fileman = require('fi-seed-component-fileman');
 var db = require('your-database-manager');
+var fileman = require('fi-fileman');
 var app = require('express')();
 var path = require('path');
 
