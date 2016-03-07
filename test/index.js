@@ -2,7 +2,6 @@
 
 var bodyParser = require('body-parser');
 var expect = require('chai').expect;
-var mmmagic = require('mmmagic');
 var request = require('request');
 var express = require('express');
 var crypto = require('crypto');
@@ -23,7 +22,7 @@ var stored = [];
 var host;
 
 function getfile() {
-  return fixtures.sort(function () {
+  return fixtures.sort(function() {
     return 0.5 - Math.random();
   })[0];
 }
@@ -38,9 +37,9 @@ function getdata() {
   };
 }
 
-describe('Fi Fileman', function () {
+describe('Fi Fileman', function() {
 
-  it('should use default values if not configured', function () {
+  it('should use default values if not configured', function() {
     expect(fileman.defaults.stordir).to.be.a('string');
     expect(fileman.defaults.tempdir).to.be.a('string');
 
@@ -48,37 +47,37 @@ describe('Fi Fileman', function () {
     expect(fileman.config.tempdir).to.be.empty;
   });
 
-  it('should configure successfully', function () {
+  it('should configure successfully', function() {
     fileman.configure(config);
 
     expect(fileman.config.stordir).to.equal(config.stordir);
     expect(fileman.config.tempdir).to.equal(config.tempdir);
   });
 
-  it('should be kept initialized', function () {
+  it('should be kept initialized', function() {
     expect(require('..').config.stordir).to.equal(config.stordir);
     expect(require('..').config.tempdir).to.equal(config.tempdir);
   });
 
 });
 
-describe('Fi Fileman HTTP', function () {
+describe('Fi Fileman HTTP', function() {
 
-  before(function (done) {
+  before(function(done) {
     fs.removeSync(logfile);
 
     var walker = walk.walk(path.join(__dirname, 'fixtures'));
 
-    walker.on('file', function (root, stats, next) {
+    walker.on('file', function(root, stats, next) {
       fixtures.push(path.join(root, stats.name));
       next();
     });
 
-    walker.on('errors', function (err) {
+    walker.on('errors', function(err) {
       throw err;
     });
 
-    walker.on('end', function () {
+    walker.on('end', function() {
       var app = express();
 
       app.use(bodyParser.json());
@@ -90,7 +89,7 @@ describe('Fi Fileman HTTP', function () {
       app.use(fileman.multiparser());
       app.use(fileman.cleaner());
 
-      app.get('/', function (req, res, next) {
+      app.get('/', function(req, res, next) {
         res.end();
       });
 
@@ -101,8 +100,8 @@ describe('Fi Fileman HTTP', function () {
           return res.send(saved);
         }
 
-        req.files.forEach(function (file) {
-          fileman.save(file, 'with-post', function (err, fileinfo) {
+        req.files.forEach(function(file) {
+          fileman.save(file, 'with-post', function(err, fileinfo) {
             if (err) {
               return next(err);
             }
@@ -119,64 +118,56 @@ describe('Fi Fileman HTTP', function () {
       app.post('/', upload);
       app.put('/', upload);
 
-      app.get('/file', function (req, res, next) {
+      app.get('/file', function(req, res, next) {
         if (!req.query.path) {
           return res.status(400).end();
         }
 
         var resolved = fileman.resolve(req.query.path);
 
-        fs.exists(resolved, function (exists) {
+        fs.exists(resolved, function(exists) {
           if (!exists) {
             return res.status(404).end();
           }
 
-          fs.stat(resolved, function (err, stats) {
+          fs.stat(resolved, function(err, stats) {
             if (err) {
               throw err;
             }
 
-            var magic = new mmmagic.Magic(mmmagic.MAGIC_MIME_TYPE);
+            var hash = crypto.createHash('md5');
+            var rs = fileman.read(req.query.path);
 
-            magic.detectFile(resolved, function (err, mimetype) {
-              if (err) {
-                return next(err);
-              }
+            rs.on('data', function(data) {
+              hash.update(data, 'utf8');
+            });
 
-              var hash = crypto.createHash('md5');
-              var rs = fileman.read(req.query.path);
+            rs.once('error', function(err) {
+              next(err);
+            });
 
-              rs.on('data', function (data) {
-                hash.update(data, 'utf8');
+            rs.once('end', function() {
+              res.set({
+                'Content-Disposition': 'inline; filename="' + path.basename(req.query.path) + '"',
+                'Cache-Control': 'max-age=31536000',
+                'Content-Length': stats.size,
+                'Last-Modified': stats.mtime,
+                // 'Content-Type': mimetype,
+                'ETag': hash.digest('hex')
               });
 
-              rs.on('error', function (err) {
-                next(err);
-              });
-
-              rs.on('end', function () {
-                res.set({
-                  'Content-Disposition': 'inline; filename="' + path.basename(req.query.path) + '"',
-                  'Cache-Control': 'max-age=31536000',
-                  'Content-Length': stats.size,
-                  'Last-Modified': stats.mtime,
-                  'Content-Type': mimetype,
-                  'ETag': hash.digest('hex')
-                });
-
-                fileman.read(req.query.path).pipe(res);
-              });
+              fileman.read(req.query.path).pipe(res);
             });
           });
         });
       });
 
-      app.use(function (req, res, next) {
+      app.use(function(req, res, next) {
         res.status(404);
         next();
       });
 
-      app.use(function (err, req, res, next) {
+      app.use(function(err, req, res, next) {
         if (res.status === 404) {
           return res.end();
         }
@@ -184,7 +175,7 @@ describe('Fi Fileman HTTP', function () {
         throw err;
       });
 
-      var server = app.listen(function () {
+      var server = app.listen(function() {
         console.log('\nServer listening on port', server.address().port, '\n');
         host = 'http://localhost:' + server.address().port;
         done();
@@ -193,9 +184,9 @@ describe('Fi Fileman HTTP', function () {
     });
   });
 
-  describe('server', function () {
-    it('should respond a GET to / with a 200 status code', function (done) {
-      request.get(host, function (err, res) {
+  describe('server', function() {
+    it('should respond a GET to / with a 200 status code', function(done) {
+      request.get(host, function(err, res) {
         expect(err).to.be.null;
         expect(res.statusCode).to.equal(200);
 
@@ -204,19 +195,19 @@ describe('Fi Fileman HTTP', function () {
     });
   });
 
-  describe('component', function () {
-    it('should be a object', function () {
+  describe('component', function() {
+    it('should be a object', function() {
       expect(fileman).to.be.an('object');
     });
 
-    it('should processes a multipart form data without files', function (done) {
+    it('should processes a multipart form data without files', function(done) {
       request.post({
         url: host,
 
         formData: {
           werwer: 'werwerwer'
         }
-      }, function (err, res, body) {
+      }, function(err, res, body) {
         var files = JSON.parse(body);
 
         expect(err).to.be.null;
@@ -228,8 +219,8 @@ describe('Fi Fileman HTTP', function () {
       });
     });
 
-    it('should parse and save multipart-form data via POST', function (done) {
-      request.post(getdata(), function (err, res, body) {
+    it('should parse and save multipart-form data via POST', function(done) {
+      request.post(getdata(), function(err, res, body) {
         var files = JSON.parse(body);
 
         expect(err).to.be.null;
@@ -249,8 +240,8 @@ describe('Fi Fileman HTTP', function () {
       });
     });
 
-    it('should parse and save multipart-form data via PUT', function (done) {
-      request.put(getdata(), function (err, res, body) {
+    it('should parse and save multipart-form data via PUT', function(done) {
+      request.put(getdata(), function(err, res, body) {
         var files = JSON.parse(body);
 
         expect(err).to.be.null;
@@ -270,7 +261,7 @@ describe('Fi Fileman HTTP', function () {
       });
     });
 
-    it('should be able to process parallel requests', function (done) {
+    it('should be able to process parallel requests', function(done) {
       var completed = 0;
       var total = 20;
 
@@ -300,7 +291,7 @@ describe('Fi Fileman HTTP', function () {
       }
     });
 
-    it('should be able to save multiple uploaded files', function (done) {
+    it('should be able to save multiple uploaded files', function(done) {
       request.put({
         url: host,
 
@@ -312,7 +303,7 @@ describe('Fi Fileman HTTP', function () {
             fs.createReadStream(getfile())
           ]
         }
-      }, function (err, res, body) {
+      }, function(err, res, body) {
         var files = JSON.parse(body);
 
         expect(err).to.be.null;
@@ -320,7 +311,7 @@ describe('Fi Fileman HTTP', function () {
         expect(files).to.be.an('array');
         expect(files.length).to.equal(4);
 
-        files.forEach(function (file) {
+        files.forEach(function(file) {
           expect(file.name).to.be.a('string');
           expect(file.type).to.be.a('string');
           expect(file.stats.size).to.be.a('number');
@@ -334,7 +325,7 @@ describe('Fi Fileman HTTP', function () {
       });
     });
 
-    it('should be able to save multiple uploaded files on parallel requests', function (done) {
+    it('should be able to save multiple uploaded files on parallel requests', function(done) {
       var completed = 0;
       var total = 20;
 
@@ -346,7 +337,7 @@ describe('Fi Fileman HTTP', function () {
         expect(files).to.be.an('array');
         expect(files.length).to.equal(4);
 
-        files.forEach(function (file) {
+        files.forEach(function(file) {
           expect(file.name).to.be.a('string');
           expect(file.type).to.be.a('string');
           expect(file.stats.size).to.be.a('number');
@@ -377,21 +368,21 @@ describe('Fi Fileman HTTP', function () {
       }
     });
 
-    it('should download a file from it\'s path', function (done) {
-      var file = stored.sort(function () {
+    it('should download a file from it\'s path', function(done) {
+      var file = stored.sort(function() {
         return 0.5 - Math.random();
       })[0];
 
       var filepath = path.normalize(path.join(downloads, path.basename(file.path)));
       var ws = fs.createOutputStream(filepath);
 
-      ws.on('error', function (err) {
+      ws.once('error', function(err) {
         throw err;
       });
 
-      ws.on('finish', function () {
-        ws.close(function () {
-          fs.stat(filepath, function (err, stats) {
+      ws.once('finish', function() {
+        ws.close(function() {
+          fs.stat(filepath, function(err, stats) {
             if (err) {
               throw err;
             }
@@ -405,20 +396,20 @@ describe('Fi Fileman HTTP', function () {
 
       request(host + '/file?path=' + file.path).
 
-      on('response', function (res) {
+      once('response', function(res) {
         expect(res.statusCode).to.equal(200);
         expect(Number(res.headers['content-length'])).to.equal(file.stats.size);
         expect(res.headers.etag).to.equal(file.md5);
       }).
 
-      on('error', function (err) {
+      once('error', function(err) {
         throw err;
       }).
 
       pipe(ws);
     });
 
-    after(function () {
+    after(function() {
       fs.removeSync(config.stordir);
       fs.removeSync(config.tempdir);
       fs.removeSync(downloads);
