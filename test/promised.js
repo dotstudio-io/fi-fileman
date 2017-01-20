@@ -17,7 +17,6 @@ const logfile = path.join(__dirname, 'tests.log');
 const fixtures = [];
 
 var stored = [];
-
 var host;
 
 function getfile() {
@@ -36,7 +35,7 @@ function getdata() {
   };
 }
 
-describe('Fi Fileman', function () {
+describe('Fi Fileman (Promised)', function () {
 
   it('should use default values if not configured', function () {
     expect(fileman.defaults.stordir).to.be.a('string');
@@ -55,7 +54,7 @@ describe('Fi Fileman', function () {
 
 });
 
-describe('Fi Fileman HTTP', function () {
+describe('Fi Fileman HTTP (Promised)', function () {
 
   before(function (done) {
     fs.removeSync(logfile);
@@ -93,17 +92,13 @@ describe('Fi Fileman HTTP', function () {
         }
 
         req.files.forEach((file) => {
-          fileman.save(file, 'with-post', (err, fileinfo) => {
-            if (err) {
-              return next(err);
-            }
-
+          fileman.save(file, 'with-post').then((fileinfo) => {
             saved.push(fileinfo);
 
             if (saved.length === req.files.length) {
               res.send(saved);
             }
-          });
+          }).catch(next);
         });
       }
 
@@ -140,7 +135,7 @@ describe('Fi Fileman HTTP', function () {
 
             rs.once('end', () => {
               res.set({
-                'Content-Disposition': 'inline; filename="' + path.basename(req.query.path) + '"',
+                'Content-Disposition': 'attachment; filename="' + path.basename(req.query.path) + '"',
                 'Cache-Control': 'max-age=31536000',
                 'Content-Length': stats.size,
                 'Last-Modified': stats.mtime,
