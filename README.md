@@ -1,4 +1,4 @@
-# Fi Fileman
+# Fi Fileman [![Build Status](https://travis-ci.org/FinalDevStudio/fi-fileman.svg?branch=master)](https://travis-ci.org/FinalDevStudio/fi-fileman)
 File manager and `multipart/form-data` parser for Node.js Express applications.
 
 ## Installing
