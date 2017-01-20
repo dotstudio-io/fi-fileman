@@ -20,7 +20,7 @@
     "busboy": "^0.2.9",
     "fs-extra": "^0.26.2",
     "is_js": "^0.8.0",
-    "node-uuid": "^1.4.3"
+    "uuid": "^3.0.0"
   },
   "devDependencies": {
     "body-parser": "^1.13.3",
