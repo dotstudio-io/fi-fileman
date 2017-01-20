@@ -1,11 +1,11 @@
 'use strict';
 
+const md5File = require('md5-file/promise');
 const bodyParser = require('body-parser');
 const expect = require('chai').expect;
 const request = require('request');
 const express = require('express');
-const crypto = require('crypto');
-const fs = require('fs-extra');
+const fs = require('fs-promise');
 const path = require('path');
 const walk = require('walk');
 
@@ -83,7 +83,7 @@ describe('Fi Fileman HTTP', function () {
       app.use(fileman.multiparser());
       app.use(fileman.cleaner());
 
-      app.get('/', (req, res, next) => res.end());
+      app.get('/', (req, res, next) => res.end()); // eslint-disable-line
 
       function upload(req, res, next) {
         var saved = [];
@@ -117,41 +117,26 @@ describe('Fi Fileman HTTP', function () {
 
         var resolved = fileman.resolve(req.query.path);
 
-        fs.exists(resolved, (exists) => {
+        fs.exists(resolved).then((exists) => {
           if (!exists) {
             return res.status(404).end();
           }
 
-          fs.stat(resolved, (err, stats) => {
-            if (err) {
-              throw err;
-            }
-
-            var hash = crypto.createHash('md5');
-            var rs = fileman.read(req.query.path);
-
-            rs.on('data', (data) => {
-              hash.update(data, 'utf8');
+          return fs.stat(resolved);
+        }).then((stats) => {
+          return md5File(resolved).then((hash) => {
+            res.set({
+              'Content-Disposition': 'inline; filename="' + path.basename(req.query.path) + '"',
+              'Cache-Control': 'max-age=31536000',
+              'Content-Length': stats.size,
+              'Last-Modified': stats.mtime,
+              // 'Content-Type': mimetype,
+              'ETag': hash
             });
 
-            rs.once('error', (err) => {
-              next(err);
-            });
-
-            rs.once('end', () => {
-              res.set({
-                'Content-Disposition': 'inline; filename="' + path.basename(req.query.path) + '"',
-                'Cache-Control': 'max-age=31536000',
-                'Content-Length': stats.size,
-                'Last-Modified': stats.mtime,
-                // 'Content-Type': mimetype,
-                'ETag': hash.digest('hex')
-              });
-
-              fileman.read(req.query.path).pipe(res);
-            });
+            fileman.read(req.query.path).pipe(res);
           });
-        });
+        }).catch(next);
       });
 
       app.use((req, res, next) => {
@@ -159,7 +144,7 @@ describe('Fi Fileman HTTP', function () {
         next();
       });
 
-      app.use((err, req, res, next) => {
+      app.use((err, req, res, next) => { // eslint-disable-line
         if (res.status === 404) {
           return res.end();
         }
@@ -365,46 +350,42 @@ describe('Fi Fileman HTTP', function () {
       })[0];
 
       var filepath = path.normalize(path.join(downloads, path.basename(file.path)));
-      var ws = fs.createOutputStream(filepath);
 
-      ws.once('error', function (err) {
-        throw err;
-      });
+      fs.ensureDir(path.dirname(filepath)).then(() => {
+        var ws = fs.createWriteStream(filepath);
 
-      ws.once('finish', function () {
-        ws.close(function () {
-          fs.stat(filepath, function (err, stats) {
-            if (err) {
-              throw err;
-            }
+        ws.once('error', done);
 
-            expect(stats.size).to.equal(file.stats.size);
+        ws.once('finish', function () {
+          ws.close(function () {
+            fs.stat(filepath, function (err, stats) {
+              if (err) {
+                throw err;
+              }
 
-            done();
+              expect(stats.size).to.equal(file.stats.size);
+
+              done();
+            });
           });
         });
+
+        request(host + '/file?path=' + file.path).once('response', function (res) {
+          expect(res.statusCode).to.equal(200);
+          expect(Number(res.headers['content-length'])).to.equal(file.stats.size);
+          expect(res.headers.etag).to.equal(file.md5);
+        }).once('error', done).pipe(ws);
       });
-
-      request(host + '/file?path=' + file.path).
-
-      once('response', function (res) {
-        expect(res.statusCode).to.equal(200);
-        expect(Number(res.headers['content-length'])).to.equal(file.stats.size);
-        expect(res.headers.etag).to.equal(file.md5);
-      }).
-
-      once('error', function (err) {
-        throw err;
-      }).
-
-      pipe(ws);
     });
 
-    after(function () {
-      fs.removeSync(config.stordir);
-      fs.removeSync(config.tempdir);
-      fs.removeSync(downloads);
+    after(function (done) {
+      fs.remove(config.stordir).then(() => {
+        return fs.remove(config.tempdir);
+      }).then(() => {
+        return fs.remove(downloads);
+      }).then(done).catch(done);
     });
+
   });
 
 });
