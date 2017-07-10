@@ -78,7 +78,7 @@ fileman.configure({
 
   stordir: path.join(process.env.HOME || process.env.USERPROFILE, 'my-app', 'storage'),
 
-  tempdir: path.join(os.tmpDir(), 'my-app', 'uploads')
+  tempdir: path.join(os.tmpdir(), 'my-app', 'uploads')
 
 });
 ```
@@ -88,7 +88,7 @@ It only receives a parameter that must be an `Object` with the following optiona
 - **tempdir**: This can be a `String` to the absolute path where the temporal uploaded files are saved. It defaults to:
 
   ```javascript
-  path.join(os.tmpDir(), 'fileman-uploads')
+  path.join(os.tmpdir(), 'fileman-uploads')
   ```
 
 - **stordir**: This can be a `String` to the absolute path where the files are finally stored. It defaults to:
@@ -113,7 +113,7 @@ module.exports = {
 
   stordir: path.join(process.env.HOME || process.env.USERPROFILE, 'my-app', 'storage'),
 
-  tempdir: path.join(os.tmpDir(), 'my-app', 'uploads')
+  tempdir: path.join(os.tmpdir(), 'my-app', 'uploads')
 
 };
 ```
