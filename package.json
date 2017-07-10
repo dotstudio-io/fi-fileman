@@ -19,13 +19,13 @@
   "dependencies": {
     "busboy": "^0.2.9",
     "fi-is": "^1.1.5",
-    "fs-promise": "^1.0.0",
+    "fs-extra": "^3.0.1",
     "md5-file": "^3.1.1",
     "uuid": "^3.0.0"
   },
   "devDependencies": {
     "body-parser": "^1.13.3",
-    "chai": "^3.2.0",
+    "chai": "^4.0.2",
     "express": "^4.13.3",
     "mocha": "^3.2.0",
     "request": "^2.61.0",

@@ -5,7 +5,7 @@ const bodyParser = require('body-parser');
 const expect = require('chai').expect;
 const request = require('request');
 const express = require('express');
-const fs = require('fs-promise');
+const fs = require('fs-extra');
 const path = require('path');
 const walk = require('walk');
 
@@ -41,8 +41,8 @@ describe('Fi Fileman (Promised)', function () {
     expect(fileman.defaults.stordir).to.be.a('string');
     expect(fileman.defaults.tempdir).to.be.a('string');
 
-    expect(fileman.config.stordir).to.be.empty;
-    expect(fileman.config.tempdir).to.be.empty;
+    expect(fileman.config.stordir).to.be.undefined;
+    expect(fileman.config.tempdir).to.be.undefined;
   });
 
   it('should configure successfully', function () {
