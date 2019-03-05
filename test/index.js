@@ -36,9 +36,8 @@ function getdata() {
   };
 }
 
-describe('Fi Fileman', function () {
-
-  it('should use default values if not configured', function () {
+describe('Fi Fileman', function() {
+  it('should use default values if not configured', function() {
     expect(fileman.defaults.stordir).to.be.a('string');
     expect(fileman.defaults.tempdir).to.be.a('string');
 
@@ -46,18 +45,18 @@ describe('Fi Fileman', function () {
     expect(fileman.config.tempdir).to.be.undefined;
   });
 
-  it('should configure successfully', function () {
+  it('should configure successfully', function() {
     fileman.configure(config);
 
     expect(fileman.config.stordir).to.equal(config.stordir);
     expect(fileman.config.tempdir).to.equal(config.tempdir);
   });
-
 });
 
-describe('Fi Fileman HTTP', function () {
+describe('Fi Fileman HTTP', function() {
+  let server;
 
-  before(function (done) {
+  before(function(done) {
     fs.removeSync(logfile);
 
     var walker = walk.walk(path.join(__dirname, 'fixtures'));
@@ -67,7 +66,7 @@ describe('Fi Fileman HTTP', function () {
       next();
     });
 
-    walker.on('errors', (err) => {
+    walker.on('errors', err => {
       throw err;
     });
 
@@ -76,9 +75,11 @@ describe('Fi Fileman HTTP', function () {
 
       app.use(bodyParser.json());
 
-      app.use(bodyParser.urlencoded({
-        extended: false
-      }));
+      app.use(
+        bodyParser.urlencoded({
+          extended: false
+        })
+      );
 
       app.use(fileman.multiparser());
       app.use(fileman.cleaner());
@@ -92,7 +93,7 @@ describe('Fi Fileman HTTP', function () {
           return res.send(saved);
         }
 
-        req.files.forEach((file) => {
+        req.files.forEach(file => {
           fileman.save(file, 'with-post', (err, fileinfo) => {
             if (err) {
               return next(err);
@@ -117,26 +118,29 @@ describe('Fi Fileman HTTP', function () {
 
         var resolved = fileman.resolve(req.query.path);
 
-        fs.exists(resolved).then((exists) => {
-          if (!exists) {
-            return res.status(404).end();
-          }
+        fs.exists(resolved)
+          .then(exists => {
+            if (!exists) {
+              return res.status(404).end();
+            }
 
-          return fs.stat(resolved);
-        }).then((stats) => {
-          return md5File(resolved).then((hash) => {
-            res.set({
-              'Content-Disposition': 'inline; filename="' + path.basename(req.query.path) + '"',
-              'Cache-Control': 'max-age=31536000',
-              'Content-Length': stats.size,
-              'Last-Modified': stats.mtime,
-              // 'Content-Type': mimetype,
-              'ETag': hash
+            return fs.stat(resolved);
+          })
+          .then(stats => {
+            return md5File(resolved).then(hash => {
+              res.set({
+                'Content-Disposition': 'inline; filename="' + path.basename(req.query.path) + '"',
+                'Cache-Control': 'max-age=31536000',
+                'Content-Length': stats.size,
+                'Last-Modified': stats.mtime,
+                // 'Content-Type': mimetype,
+                ETag: hash
+              });
+
+              fileman.read(req.query.path).pipe(res);
             });
-
-            fileman.read(req.query.path).pipe(res);
-          });
-        }).catch(next);
+          })
+          .catch(next);
       });
 
       app.use((req, res, next) => {
@@ -144,7 +148,8 @@ describe('Fi Fileman HTTP', function () {
         next();
       });
 
-      app.use((err, req, res, next) => { // eslint-disable-line
+      app.use((err, req, res, next) => {
+        // eslint-disable-line
         if (res.status === 404) {
           return res.end();
         }
@@ -152,17 +157,16 @@ describe('Fi Fileman HTTP', function () {
         throw err;
       });
 
-      var server = app.listen(() => {
+      server = app.listen(() => {
         host = 'http://localhost:' + server.address().port;
         done();
       });
-
     });
   });
 
-  describe('server', function () {
-    it('should respond a GET to / with a 200 status code', function (done) {
-      request.get(host, function (err, res) {
+  describe('test server', function() {
+    it('should respond a GET to / with a 200 status code', function(done) {
+      request.get(host, function(err, res) {
         expect(err).to.be.null;
         expect(res.statusCode).to.equal(200);
 
@@ -171,32 +175,35 @@ describe('Fi Fileman HTTP', function () {
     });
   });
 
-  describe('component', function () {
-    it('should be a object', function () {
+  describe('component', function() {
+    it('should be a object', function() {
       expect(fileman).to.be.an('object');
     });
 
-    it('should processes a multipart form data without files', function (done) {
-      request.post({
-        url: host,
+    it('should processes a multipart form data without files', function(done) {
+      request.post(
+        {
+          url: host,
 
-        formData: {
-          werwer: 'werwerwer'
+          formData: {
+            werwer: 'werwerwer'
+          }
+        },
+        function(err, res, body) {
+          var files = JSON.parse(body);
+
+          expect(err).to.be.null;
+          expect(res.statusCode).to.equal(200);
+          expect(files).to.be.an('array');
+          expect(files.length).to.equal(0);
+
+          done();
         }
-      }, function (err, res, body) {
-        var files = JSON.parse(body);
-
-        expect(err).to.be.null;
-        expect(res.statusCode).to.equal(200);
-        expect(files).to.be.an('array');
-        expect(files.length).to.equal(0);
-
-        done();
-      });
+      );
     });
 
-    it('should parse and save multipart-form data via POST', function (done) {
-      request.post(getdata(), function (err, res, body) {
+    it('should parse and save multipart-form data via POST', function(done) {
+      request.post(getdata(), function(err, res, body) {
         var files = JSON.parse(body);
 
         expect(err).to.be.null;
@@ -216,8 +223,8 @@ describe('Fi Fileman HTTP', function () {
       });
     });
 
-    it('should parse and save multipart-form data via PUT', function (done) {
-      request.put(getdata(), function (err, res, body) {
+    it('should parse and save multipart-form data via PUT', function(done) {
+      request.put(getdata(), function(err, res, body) {
         var files = JSON.parse(body);
 
         expect(err).to.be.null;
@@ -237,7 +244,7 @@ describe('Fi Fileman HTTP', function () {
       });
     });
 
-    it('should be able to process parallel requests', function (done) {
+    it('should be able to process parallel requests', function(done) {
       var completed = 0;
       var total = 20;
 
@@ -267,41 +274,44 @@ describe('Fi Fileman HTTP', function () {
       }
     });
 
-    it('should be able to save multiple uploaded files', function (done) {
-      request.put({
-        url: host,
+    it('should be able to save multiple uploaded files', function(done) {
+      request.put(
+        {
+          url: host,
 
-        formData: {
-          uploads: [
-            fs.createReadStream(getfile()),
-            fs.createReadStream(getfile()),
-            fs.createReadStream(getfile()),
-            fs.createReadStream(getfile())
-          ]
+          formData: {
+            uploads: [
+              fs.createReadStream(getfile()),
+              fs.createReadStream(getfile()),
+              fs.createReadStream(getfile()),
+              fs.createReadStream(getfile())
+            ]
+          }
+        },
+        function(err, res, body) {
+          var files = JSON.parse(body);
+
+          expect(err).to.be.null;
+          expect(res.statusCode).to.equal(200);
+          expect(files).to.be.an('array');
+          expect(files.length).to.equal(4);
+
+          files.forEach(function(file) {
+            expect(file.name).to.be.a('string');
+            expect(file.type).to.be.a('string');
+            expect(file.stats.size).to.be.a('number');
+            expect(file.path).to.be.a('string');
+            expect(file.md5).to.be.a('string');
+          });
+
+          stored = stored.concat(files);
+
+          done();
         }
-      }, function (err, res, body) {
-        var files = JSON.parse(body);
-
-        expect(err).to.be.null;
-        expect(res.statusCode).to.equal(200);
-        expect(files).to.be.an('array');
-        expect(files.length).to.equal(4);
-
-        files.forEach(function (file) {
-          expect(file.name).to.be.a('string');
-          expect(file.type).to.be.a('string');
-          expect(file.stats.size).to.be.a('number');
-          expect(file.path).to.be.a('string');
-          expect(file.md5).to.be.a('string');
-        });
-
-        stored = stored.concat(files);
-
-        done();
-      });
+      );
     });
 
-    it('should be able to save multiple uploaded files on parallel requests', function (done) {
+    it('should be able to save multiple uploaded files on parallel requests', function(done) {
       var completed = 0;
       var total = 20;
 
@@ -313,7 +323,7 @@ describe('Fi Fileman HTTP', function () {
         expect(files).to.be.an('array');
         expect(files.length).to.equal(4);
 
-        files.forEach(function (file) {
+        files.forEach(function(file) {
           expect(file.name).to.be.a('string');
           expect(file.type).to.be.a('string');
           expect(file.stats.size).to.be.a('number');
@@ -329,23 +339,26 @@ describe('Fi Fileman HTTP', function () {
       }
 
       for (var i = 0; i < total; i++) {
-        request.post({
-          url: host,
+        request.post(
+          {
+            url: host,
 
-          formData: {
-            uploads: [
-              fs.createReadStream(getfile()),
-              fs.createReadStream(getfile()),
-              fs.createReadStream(getfile()),
-              fs.createReadStream(getfile())
-            ]
-          }
-        }, onresponse);
+            formData: {
+              uploads: [
+                fs.createReadStream(getfile()),
+                fs.createReadStream(getfile()),
+                fs.createReadStream(getfile()),
+                fs.createReadStream(getfile())
+              ]
+            }
+          },
+          onresponse
+        );
       }
     });
 
-    it('should download a file from it\'s path', function (done) {
-      var file = stored.sort(function () {
+    it("should download a file from it's path", function(done) {
+      var file = stored.sort(function() {
         return 0.5 - Math.random();
       })[0];
 
@@ -356,9 +369,9 @@ describe('Fi Fileman HTTP', function () {
 
         ws.once('error', done);
 
-        ws.once('finish', function () {
-          ws.close(function () {
-            fs.stat(filepath, function (err, stats) {
+        ws.once('finish', function() {
+          ws.close(function() {
+            fs.stat(filepath, function(err, stats) {
               if (err) {
                 throw err;
               }
@@ -370,22 +383,22 @@ describe('Fi Fileman HTTP', function () {
           });
         });
 
-        request(host + '/file?path=' + file.path).once('response', function (res) {
-          expect(res.statusCode).to.equal(200);
-          expect(Number(res.headers['content-length'])).to.equal(file.stats.size);
-          expect(res.headers.etag).to.equal(file.md5);
-        }).once('error', done).pipe(ws);
+        request(host + '/file?path=' + file.path)
+          .once('response', function(res) {
+            expect(res.statusCode).to.equal(200);
+            expect(Number(res.headers['content-length'])).to.equal(file.stats.size);
+            expect(res.headers.etag).to.equal(file.md5);
+          })
+          .once('error', done)
+          .pipe(ws);
       });
     });
 
-    after(function (done) {
-      fs.remove(config.stordir).then(() => {
-        return fs.remove(config.tempdir);
-      }).then(() => {
-        return fs.remove(downloads);
-      }).then(done).catch(done);
+    after(function() {
+      fs.removeSync(config.stordir);
+      fs.removeSync(config.tempdir);
+      fs.removeSync(downloads);
+      server.close();
     });
-
   });
-
 });
