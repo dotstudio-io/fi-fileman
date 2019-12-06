@@ -33,33 +33,33 @@ app.use(fileman.cleaner());
 
 //...
 
-app.post('/api/files/', (req, res, next) => {
+app.post('/api/files/', async (req, res, next) => {
+  const saved = [];
 
-  var saved = [];
-
-  req.files.forEach((file) => {
-    fileman.save(file, folder).then(fileinfo) => {
+  try {
+    for (const file of req.files) {
+      const fileinfo = await fileman.save(file, folder);
       /* Save the file information (fileinfo) to a database entry or something alike... */
-      return db.model('files').create(fileinfo);
-    }).then((data) => {
+      const data = await db.model('files').create(fileinfo);
+
       saved.push(data);
+    }
 
-      if (saved.length === req.files.length) {
-        res.send(saved);
-      }
-    }).catch(next);
-  });
-
+    res.send(saved);
+  } catch (err) {
+    next(err);
+  }
 });
 
-app.get('/api/files/:id', (req, res, next) => {
-
-  /* Obtain the file information somehow... */
-  db.model('files').findById(req.params.id).then((data) => {
+app.get('/api/files/:id', async (req, res, next) => {
+  try {
+    /* Obtain the file information somehow... */
+    const data = await db.model('files').findById(req.params.id);
     /* Send the data to the user */
     res.download(fileman.resolve(data.path), data.name);
-  }).catch(next);
-
+  } catch (err) {
+    next(err);
+  }
 });
 
 //...
@@ -75,11 +75,8 @@ This method should be called before using any other **Fi Fileman**'s methods:
 
 ```javascript
 fileman.configure({
-
   stordir: path.join(process.env.HOME || process.env.USERPROFILE, 'my-app', 'storage'),
-
   tempdir: path.join(os.tmpdir(), 'my-app', 'uploads')
-
 });
 ```
 
@@ -104,24 +101,20 @@ It only receives a parameter that must be an `Object` with the following optiona
 If you wish to configure it with a module then it should look like this:
 
 ```javascript
-'use strict';
-
 const path = require('path');
 const os = require('os');
 
 module.exports = {
-
   stordir: path.join(process.env.HOME || process.env.USERPROFILE, 'my-app', 'storage'),
-
   tempdir: path.join(os.tmpdir(), 'my-app', 'uploads')
-
 };
 ```
 
 And then in your application, assuming it's located in `<APP_DIR>/config/fileman.js` and you're calling it from a script located in `<APP_DIR>/app.js`:
 
 ```javascript
-fileman.init(require('./config/fileman'));
+const config = require('./config/fileman');
+fileman.init(config);
 ```
 
 ### Multiparser
@@ -137,23 +130,23 @@ app.use(fileman.multiparser());
 In the `next` callback you'll receive the parameters as usual but `req` will now have `body` and `files` properties as an `Object` and `Array` respectively:
 
 ```javascript
-app.post('/api/files', (req, res, next) => {
+app.post('/api/files', async (req, res, next) => {
+  try {
+    const saved = [];
 
-  var saved = [];
+    for (const file of req.files) {
+      await fileman.save(file, folder);
 
-  req.files.forEach((file) => {
-    fileman.save(file, folder).then(fileinfo) => {
       /* Save the file information (fileinfo) to a database entry or something alike... */
-      return db.model('files').create(fileinfo);
-    }).then((data) => {
+      const data = await db.model('files').create(fileinfo);
+
       saved.push(data);
+    }
 
-      if (saved.length === req.files.length) {
-        res.send(saved);
-      }
-    }).catch(next);
-  });
-
+    res.send(saved);
+  } catch (err) {
+    next(err);
+  }
 });
 ```
 
@@ -187,20 +180,18 @@ It must be called with three parameters:
 - **done**: A callback `Function` that will receive an `err` `Object`, `null` on success, and a `fileinfo` `Object`.
 
 ```javascript
-var file = {
+const folder = '/folder/relative/to/stordir';
+const file = {
   name: 'my-file.txt',
   path: '/full/path/to/the/file/my-file.txt'
 };
 
-var folder = '/folder/relative/to/stordir';
-
-fileman.save(file, folder, (err, fileinfo) => {
-  if (err) {
-    return next(err);
-  }
-
-  /* File has been saved successfully */
-});
+try {
+  const fileinfo = await fileman.save(file, folder);
+  // Check file info
+} catch (err) {
+  // Error!
+}
 ```
 
 #### Important
@@ -213,17 +204,14 @@ Reads a file from it's path relative to the `stordir` folder and returns it's re
 
 ```javascript
 app.get('/api/files/:id', (req, res, end) => {
-
-  // Obtain the file information somehow...
-
-  db.files.findById(req.params.id, (err, fileinfo) => {
-    if (err) {
-      return next(err);
-    }
+  try {
+    // Obtain the file information somehow...
+    const fileinfo = await db.files.findById(req.params.id);
 
     fileman.read(fileinfo.path).pipe(res);
-  });
-
+  } catch (err) {
+    next(err);
+  }
 });
 ```
 
@@ -231,15 +219,12 @@ It's a good practice to set the correct and recommended response headers with th
 
 ```javascript
 app.get('/api/files/:id', (req, res, end) => {
-
-  /* Obtain the file information somehow... */
-  db.model('files').findById(req.params.id, (err, fileinfo) => {
-    if (err) {
-      return next(err);
-    }
+   try {
+    // Obtain the file information somehow...
+    const fileinfo = await db.files.findById(req.params.id);
 
     res.set({
-      'Content-Disposition': 'inline; filename="' + fileinfo.name + '"',
+      'Content-Disposition': `inline; filename="${fileinfo.name}'"`,
       'Cache-Control': 'max-age=31536000',
       'Content-Length': fileinfo.stats.size,
       'Last-Modified': fileinfo.stats.mtime,
@@ -249,8 +234,9 @@ app.get('/api/files/:id', (req, res, end) => {
 
     /* Pipe the read content into the response */
     fileman.read(fileinfo.path).pipe(res);
-  });
-
+  } catch (err) {
+    next(err);
+  }
 });
 ```
 
@@ -264,16 +250,14 @@ Use this method is to obtain the file's full path relative to the `stordir` fold
 
 ```javascript
 app.get('/api/files/:id', (req, res, end) => {
-
-  /* Obtain the file information somehow... */
-  db.model('files').findById(req.params.id, (err, fileinfo) => {
-    if (err) {
-      return next(err);
-    }
+  try {
+    // Obtain the file information somehow...
+    const fileinfo = await db.files.findById(req.params.id);
 
     res.download(fileman.resolve(fileinfo), fileinfo.name);
-  });
-
+  } catch (err) {
+    next(err);
+  }
 });
 ```
 
@@ -318,6 +302,6 @@ The `fileinfo` `Object` structure:
 }
 ```
 
-The `fileinfo.stats` `Object` is the result of a Node.js's `fs.stat` on the file.
+The `fileinfo.stats` `Object` is the result of a NodeJS' `fs.stat` on the file.
 
 If you need to know more about `fs.stats` read the [Node.js documentation](https://nodejs.org/api/fs.html#fs_fs_stat_path_callback) and [System stats wiki](https://en.wikipedia.org/wiki/Stat_(system_call).
