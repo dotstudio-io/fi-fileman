@@ -16,6 +16,15 @@
   "scripts": {
     "test": "nyc mocha test"
   },
+  "nyc": {
+    "cache": true,
+    "reporter": [
+      "html"
+    ],
+    "include": [
+      "lib"
+    ]
+  },
   "dependencies": {
     "busboy": "^0.3.1",
     "fi-is": "^3.0.2",
