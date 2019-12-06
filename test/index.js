@@ -86,11 +86,51 @@ describe('Fi Fileman', function () {
     expect(fileman.config.tempdir).to.be.undefined;
   });
 
+  it('should not configure on invalid config object', function () {
+    expect(fileman.configure.bind(fileman, () => { })).to.throw();
+    expect(fileman.configure.bind(fileman, 'ds')).to.throw();
+    expect(fileman.configure.bind(fileman, 1234)).to.throw();
+    expect(fileman.configure.bind(fileman, '')).to.throw();
+  });
+
   it('should configure successfully', function () {
     fileman.configure(config);
 
     expect(fileman.config.stordir).to.equal(config.stordir);
     expect(fileman.config.tempdir).to.equal(config.tempdir);
+  });
+
+  describe('API', function () {
+    describe('resolve', function () {
+      it('should resolve a path with a string', function () {
+        const resolved = fileman.resolve('filename.txt');
+        expect(resolved).to.be.a('string');
+      });
+
+      it('should resolve a path with an object', function () {
+        const resolved = fileman.resolve({ path: 'filename.txt' });
+        expect(resolved).to.be.a('string');
+      });
+
+      it('should not resolve a path with anything else', function () {
+        expect(fileman.resolve.bind(fileman, () => { })).to.throw();
+        expect(fileman.resolve.bind(fileman, 1234)).to.throw();
+        expect(fileman.resolve.bind(fileman, null)).to.throw();
+      });
+    });
+
+    describe('remove', function () {
+      it('should remove a file with a string', function () {
+        const resolved = fileman.resolve('filename.txt');
+        expect(resolved).to.be.a('string');
+      });
+
+      it('should not remove a file with anything else', function () {
+        expect(fileman.resolve.bind(fileman, () => { })).to.throw();
+        expect(fileman.resolve.bind(fileman, 1234)).to.throw();
+        expect(fileman.resolve.bind(fileman, null)).to.throw();
+      });
+    });
   });
 
   describe('HTTP', function () {
@@ -365,9 +405,9 @@ describe('Fi Fileman', function () {
 
     after(async function () {
       await new Promise(resolve => server.close(resolve));
-      await fs.remove(config.stordir);
-      await fs.remove(config.tempdir);
-      await fs.remove(downloads);
+      // await fs.remove(config.stordir);
+      // await fs.remove(config.tempdir);
+      // await fs.remove(downloads);
     });
   });
 });
